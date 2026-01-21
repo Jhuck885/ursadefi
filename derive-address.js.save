@@ -1,0 +1,25 @@
+// derive-address.js — run once in project root, then delete
+require('dotenv').config({ path: '.env.local' });
+
+const { Wallet } = require('xrpl');
+
+const seed = process.env.XRPL_TEST_SEED;
+
+if (!seed) {
+  console.error('Error: XRPL_TEST_SEED missing in .env.local');
+  process.exit(1);
+}
+
+const wallet = Wallet.fromSeed(seed);
+
+console.log('=== URSADEFI DEVNET WALLET ===');
+console.log('Receiver Address (copy exact string):');
+console.log(wallet.classicAddress);
+console.log('');
+console.log('FUND NOW: https://faucet.devnet.rippletest.net');
+console.log('(Paste address → request 1000 XRP drops → wait 10-20s)');
+console.log('');
+console.log('Add to .env.local:');
+console.log(`NEXT_PUBLIC_XRPL_RECEIVER_ADDRESS=${wallet.classicAddress}`);
+console.log('');
+console.log('Then delete this file: rm derive-address.js');
