@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Magic } from 'magic-sdk';
 import { useRouter } from 'next/navigation';
+import { signIn, useSession } from 'next-auth/react';
 
 const magic = new Magic(process.env.NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY);
 
@@ -10,34 +11,23 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
 
   useEffect(() => {
-    const checkLoggedIn = async () => {
-      try {
-        const metadata = await magic.user.getMetadata(); // Validates token, gets user info
-        if (metadata) {
-          router.push('/dashboard'); // Redirect to dashboard if logged in
-        }
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const _userId = metadata.issuer; // Use for user_id in queries if needed
-      } catch (err) {
-        console.error('Metadata fetch failed:', err);
-        // No push to /login needed—already on page
-      }
-    };
-    checkLoggedIn();
-  }, [router]);
+    if (session) {
+      router.push('/dashboard'); // Redirect to dashboard if logged in
+    }
+  }, [session, router]);
 
   const handleMagicLogin = async () => {
     setLoading(true);
     try {
       const didToken = await magic.auth.loginWithEmailOTP({ email });
-      const res = await fetch('/api/auth/magic', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${didToken}` },
+      const res = await signIn('credentials', {
+        didToken,
+        redirect: false,
       });
-      if (res.ok) {
-        await magic.user.getMetadata(); // Refresh metadata to update token state
+      if (res?.ok) {
         router.push('/dashboard'); // Force redirect after success
       }
     } catch (err) {
@@ -48,10 +38,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    // Assuming next-auth signIn for Google
-    // If not set, add import { signIn } from 'next-auth/react'; and call signIn('google')
-    console.log('Google login triggered'); // Placeholder—implement if needed
-    router.push('/dashboard'); // Mock redirect
+    signIn('google');
   };
 
   return (
@@ -63,18 +50,18 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
-          className="w-full p-3 mb-4 bg-[#1e293b] border border-gray-800 rounded-lg text-white focus:border-[#1D9BF0] focus:outline-none"
+          className="w-full p-3 mb-4 bg[#1e293b] border border-gray-800 rounded-lg text-white focus:border[#1D9BF0] focus:outline-none"
         />
         <button
           onClick={handleMagicLogin}
           disabled={loading}
-          className="w-full py-3 bg-[#1D9BF0] rounded-full font-bold hover:bg-[#1a8cd8] transition-colors disabled:opacity-50"
+          className="w-full py-3 bg[#1D9BF0] rounded-full font-bold hover:bg[#1a8cd8] transition-colors disabled:opacity-50"
         >
           {loading ? 'Logging in...' : 'Login with Email (Magic)'}
         </button>
         <button
           onClick={handleGoogleLogin}
-          className="w-full py-3 mt-4 bg-[#1e293b] border border-[#1D9BF0] rounded-full font-bold hover:bg-[#2d3a4e] hover:border-[#1D9BF0]/70 transition-colors"
+          className="w-full py-3 mt-4 bg[#1e293b] border border[#1D9BF0] rounded-full font-bold hover:bg[#2d3a4e] hover:border[#1D9BF0]/70 transition-colors"
         >
           Login with Google
         </button>
