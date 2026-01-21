@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { SessionProvider } from 'next-auth/react'; // For Google auth
+import { ClientSessionProvider } from './ClientSessionProvider'; // Import existing wrapper
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-black text-white antialiased`}> {/* Force dark, Inter font */}
-        <SessionProvider>{children}</SessionProvider>
+      <body className={`${inter.className} bg-black text-white antialiased`}>
+        <ClientSessionProvider>{children}</ClientSessionProvider>
       </body>
     </html>
   );
