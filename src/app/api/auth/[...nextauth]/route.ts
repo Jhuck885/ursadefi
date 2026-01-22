@@ -37,6 +37,8 @@ export const authOptions = {
     },
     async session({ session, token }) {
       session.user.id = token.id;
+      // Optional: Add XRPL address if user has one (e.g., from DB—stub for now)
+      session.user.xrplAddress = null; // Extend later with user-specific wallet
       return session;
     },
   },

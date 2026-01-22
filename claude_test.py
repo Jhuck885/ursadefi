@@ -1,0 +1,10 @@
+from anthropic import Anthropic
+import os
+
+client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+response = client.messages.create(
+    model="claude-sonnet-4-5",
+    max_tokens=100,
+    messages=[{"role": "user", "content": "Hello from UrsaDeFi Docker setup. Confirm you can access /app folder and are ready for coding tasks."}]
+)
+print(response.content[0].text)

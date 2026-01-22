@@ -19,20 +19,17 @@ export default function DashboardLayout({
           <aside className="w-64 bg-black border-r border-gray-800 overflow-y-auto hidden md:block">
             <LeftSidebar />
           </aside>
-
           {/* Center Feed - dashboard/page.tsx renders here */}
           <main className="flex-1 overflow-y-auto">
             <div className="max-w-2xl mx-auto p-4 pt-8 pb-20 md:pb-0">
               {children}
             </div>
           </main>
-
           {/* Right Sidebar */}
           <aside className="w-80 bg-black border-l border-gray-800 overflow-y-auto hidden lg:block">
             <RightSidebar />
           </aside>
         </div>
-
         {/* Mobile bottom nav */}
         <div className="fixed bottom-0 left-0 right-0 bg-black border-t border-gray-800 md:hidden z-10">
           <div className="flex justify-around py-3">
