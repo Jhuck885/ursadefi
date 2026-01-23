@@ -5,7 +5,11 @@ import { Magic } from 'magic-sdk';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 
-const magic = new Magic(process.env.NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY);
+const magicKey = process.env.NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY;
+if (!magicKey) {
+  throw new Error('Missing Magic publishable key - check .env.local');
+}
+const magic = new Magic(magicKey);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,7 +19,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (session) {
-      router.push('/dashboard'); // Redirect to dashboard if logged in
+      router.push('/dashboard');
     }
   }, [session, router]);
 
@@ -28,7 +32,7 @@ export default function LoginPage() {
         redirect: false,
       });
       if (res?.ok) {
-        router.push('/dashboard'); // Force redirect after success
+        router.push('/dashboard');
       }
     } catch (err) {
       console.error('Magic login failed:', err);
@@ -50,18 +54,18 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Enter your email"
-          className="w-full p-3 mb-4 bg[#1e293b] border border-gray-800 rounded-lg text-white focus:border[#1D9BF0] focus:outline-none"
+          className="w-full p-3 mb-4 bg-[#1e293b] border border-gray-800 rounded-lg text-white focus:border-[#1D9BF0] focus:outline-none"
         />
         <button
           onClick={handleMagicLogin}
           disabled={loading}
-          className="w-full py-3 bg[#1D9BF0] rounded-full font-bold hover:bg[#1a8cd8] transition-colors disabled:opacity-50"
+          className="w-full py-3 bg-[#1D9BF0] rounded-full font-bold hover:bg-[#1a8cd8] transition-colors disabled:opacity-50"
         >
           {loading ? 'Logging in...' : 'Login with Email (Magic)'}
         </button>
         <button
           onClick={handleGoogleLogin}
-          className="w-full py-3 mt-4 bg[#1e293b] border border[#1D9BF0] rounded-full font-bold hover:bg[#2d3a4e] hover:border[#1D9BF0]/70 transition-colors"
+          className="w-full py-3 mt-4 bg-[#1e293b] border border-[#1D9BF0] rounded-full font-bold hover:bg-[#2d3a4e] hover:border-[#1D9BF0]/70 transition-colors"
         >
           Login with Google
         </button>
