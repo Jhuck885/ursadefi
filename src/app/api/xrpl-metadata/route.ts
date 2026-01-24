@@ -85,16 +85,21 @@ export async function POST(request: Request) {
     const result = await client.submitAndWait(signed.tx_blob);
     console.log('Full result:', JSON.stringify(result, null, 2));
 
-    if (result?.result?.meta?.TransactionResult === 'tesSUCCESS') {
-      console.log('🎉 METADATA SUCCESS — description on-chain, hash:', signed.hash);
+    const meta = result.result?.meta;
+    const txResult = typeof meta === 'object' && meta !== null && 'TransactionResult' in meta
+      ? meta.TransactionResult
+      : 'UNKNOWN';
+
+    if (txResult === 'tesSUCCESS') {
+      console.log('METADATA SUCCESS — description on-chain, hash:', signed.hash);
       return NextResponse.json({ txHash: signed.hash });
     } else {
-      console.log('Submit failed:', result?.result?.meta?.TransactionResult ?? 'unknown');
-      throw new Error(result?.result?.meta?.TransactionResult || 'Unknown fail');
+      console.log('Submit failed:', txResult);
+      throw new Error(txResult);
     }
-  } catch (err: Error) {  // Changed from any to Error
-    console.error('❌ METADATA ERROR:', err.message || err);
-    return NextResponse.json({ error: err.message || 'Failed' }, { status: 500 });
+  } catch (err) {
+    console.error('❌ METADATA ERROR:', err);
+    return NextResponse.json({ error: (err as Error).message || 'Failed' }, { status: 500 });
   } finally {
     if (client) {
       await client.disconnect().catch(() => {});

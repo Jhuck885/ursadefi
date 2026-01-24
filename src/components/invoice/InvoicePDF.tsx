@@ -155,6 +155,22 @@ const styles = StyleSheet.create({
     marginTop: 10,
     color: '#1D9BF0',
   },
+  recurringSection: {
+    marginBottom: 30,
+    borderTopWidth: 1,
+    borderTopColor: '#1D9BF0',
+    paddingTop: 10,
+  },
+  recurringTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1D9BF0',
+    marginBottom: 10,
+  },
+  recurringText: {
+    color: '#e2e8f0',
+    lineHeight: 1.5,
+  },
   footerContainer: {
     position: 'absolute',
     bottom: 20,
@@ -185,6 +201,8 @@ type InvoicePDFProps = {
   qrDataUrl: string;
   metadataTxHash?: string;
   issuedDate?: string;
+  isRecurring?: boolean; // Added
+  recurringInterval?: string; // Added
 };
 
 export const generateInvoicePDF = async (invoice: InvoicePDFProps) => {
@@ -198,7 +216,7 @@ export const generateInvoicePDF = async (invoice: InvoicePDFProps) => {
   const blob = await pdf(
     <Document>
       <Page size="A4" style={styles.page}>
-        <Image style={styles.logoTop} src="1_ursadefi_logo.png" alt="UrsaDeFi Logo" />
+        <Image style={styles.logoTop} src="1_ursadefi_logo.png" />
         <Text style={styles.header}>UrsaDeFi Invoice</Text>
         <Text style={styles.subheader}>{invoiceNumber}</Text>
         <View style={styles.section}>
@@ -226,11 +244,20 @@ export const generateInvoicePDF = async (invoice: InvoicePDFProps) => {
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>USD/XRP</Text>
           <Text style={styles.totalAmount}>
-            ${usdEquivalent} USD ({xrpAmount.toFixed(2)} XRP)</Text>
+            ${usdEquivalent} USD ({xrpAmount.toFixed(2)} XRP)
+          </Text>
         </View>
+        {invoice.isRecurring && (
+          <View style={styles.recurringSection}>
+            <Text style={styles.recurringTitle}>Recurring Payment</Text>
+            <Text style={styles.recurringText}>
+              This is a recurring invoice. Interval: {invoice.recurringInterval || 'Not specified'}
+            </Text>
+          </View>
+        )}
         <View style={styles.paymentSection}>
           <Text style={styles.paymentTitle}>Scan and Pay with XRP (Testnet)</Text>
-          {invoice.qrDataUrl && <Image style={styles.qrImage} src={invoice.qrDataUrl} alt="Payment QR Code" />}
+          {invoice.qrDataUrl && <Image style={styles.qrImage} src={invoice.qrDataUrl} />}
           <View style={styles.paymentDetails}>
             <Text style={styles.detailText}>
               Send exactly <Text style={styles.boldBlue}>{xrpAmount.toFixed(2)} XRP</Text> to:
@@ -263,7 +290,7 @@ export const generateInvoicePDF = async (invoice: InvoicePDFProps) => {
           <Text style={styles.footerText}>
             Invoice metadata recorded on XRPL • Crypto payments auto-detected • Tax-ready invoicing for freelancers
           </Text>
-          <Image style={styles.logoFooter} src="/1_ursadefi_logo.png" alt="UrsaDeFi Footer Logo" />
+          <Image style={styles.logoFooter} src="/1_ursadefi_logo.png" />
         </View>
       </Page>
     </Document>

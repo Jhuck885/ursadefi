@@ -7,7 +7,7 @@ import { signIn, useSession } from 'next-auth/react';
 
 const magicKey = process.env.NEXT_PUBLIC_MAGIC_PUBLISHABLE_KEY;
 if (!magicKey) {
-  throw new Error('Missing Magic publishable key - check .env.local');
+  throw new Error('Missing Magic publishable key - check .env.local or deployment env');
 }
 const magic = new Magic(magicKey);
 

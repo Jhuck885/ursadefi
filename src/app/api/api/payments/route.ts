@@ -1,47 +1,28 @@
-import { NextResponse } from 'next/server';  // Removed unused NextRequest
-import { Client, Transaction } from 'xrpl';  // Added Transaction type
-
-const RECEIVING_ADDRESS = process.env.NEXT_PUBLIC_XRPL_RECEIVER_ADDRESS!;
-const SERVER = 'wss://s.altnet.rippletest.net:51233';
-
+import { Client } from 'xrpl';
+import { NextResponse } from 'next/server';
+const RECEIVING_ADDRESS = process.env.NEXT_PUBLIC_XRPL_RECEIVER_ADDRESS || 'rNb4AKqA6QwhD8Nfff7rVxg5RPmyTE1vVn';
+const XRPL_SERVER = process.env.XRPL_SERVER || 'wss://s.altnet.rippletest.net:51233/';
 export async function GET() {
-  try {
-    const client = new Client(SERVER);
-    await client.connect();
-    const response = await client.request({
-      command: 'account_tx',
-      account: RECEIVING_ADDRESS,
-      limit: 10,
-      ledger_index_min: -1,
-      ledger_index_max: -1,
-      forward: false,
-    });
-    const txs = response.result.transactions
-      .filter((tx: Transaction) =>
-        tx.tx &&
-        tx.tx.TransactionType === 'Payment' &&
-        tx.tx.Destination === RECEIVING_ADDRESS &&
-        tx.meta &&
-        tx.meta.TransactionResult === 'tesSUCCESS'
-      )
-      .slice(0, 5);
-    const formatted = txs.map((tx: Transaction) => {
-      const amountDrops = typeof tx.tx.Amount === 'string' ? Number(tx.tx.Amount) : 0;
-      const amountXRP = amountDrops / 1000000;
-      const xrplTime = tx.tx.date || 0;
-      const unixTime = (xrplTime + 946684800) * 1000;
-      const date = new Date(unixTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      return {
-        amount: amountXRP,
-        date,
-        hash: tx.tx.hash,
-        tag: tx.tx.DestinationTag || null,
-      };
-    });
-    await client.disconnect();
-    return NextResponse.json(formatted);
-  } catch (err) {
-    console.error('Payments API error', err);
-    return NextResponse.json([], { status: 500 });
-  }
+const client = new Client(XRPL_SERVER);
+try {
+await client.connect();
+const response = await client.request({
+command: 'account_tx',
+account: RECEIVING_ADDRESS,
+limit: 50,
+});
+const txs = response.result.transactions
+.filter((transaction) => transaction.tx && transaction.tx.TransactionType === 'Payment' && transaction.tx.Destination === RECEIVING_ADDRESS && transaction.tx.Amount)
+.map((transaction) => ({
+id: transaction.tx!.hash,
+amount: Number((transaction.tx as any).Amount) / 1000000,
+date: new Date(transaction.tx!.date! * 1000 + 946684800000).toISOString(),
+}));
+return NextResponse.json(txs);
+} catch (error) {
+console.error('Payments error:', error);
+return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 });
+} finally {
+await client.disconnect();
+}
 }

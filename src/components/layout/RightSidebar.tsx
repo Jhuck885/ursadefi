@@ -1,10 +1,9 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import InvoiceForm from '@/components/invoice/InvoiceForm';
-import { Client, Transaction } from 'xrpl';  // Added Transaction for tx type
+import { Client, AccountTxTransaction, Transaction } from 'xrpl'; // Added Client import
 
-interface FormattedPayment {  // Added interface for payments type
+interface FormattedPayment { // Added interface for payments type
   amount: number;
   date: string;
   hash: string;
@@ -19,20 +18,32 @@ const XRPPriceCard = () => {
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true');
+        // Primary: Binance (free, no key)
+        let res = await fetch('https://api.binance.com/api/v3/ticker/24hr?symbol=XRPUSDT');
         if (res.ok) {
           const data = await res.json();
-          setPrice(data.ripple.usd);
-          setChange(data.ripple.usd_24h_change);
+          setPrice(parseFloat(data.lastPrice));
+          setChange(parseFloat(data.priceChangePercent));
+          return; // Success, exit
         }
-      } catch (err: Error) {  // Typed and used err
-        console.error('XRP price fetch failed', err.message);
+        // Fallback: Kraken (if Binance fails)
+        res = await fetch('https://api.kraken.com/0/public/Ticker?pair=XRPUSD');
+        if (res.ok) {
+          const data = await res.json();
+          const ticker = data.result.XXRPZUSD;
+          const currentPrice = parseFloat(ticker.c[0]);
+          const openPrice = parseFloat(ticker.o);
+          setPrice(currentPrice);
+          setChange(((currentPrice - openPrice) / openPrice) * 100); // Manual 24hr %
+        }
+      } catch (err: unknown) {
+        console.error('XRP price fetch failed', err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
     };
     fetchPrice();
-    const interval = setInterval(fetchPrice, 60000);
+    const interval = setInterval(fetchPrice, 60000); // 60s poll
     return () => clearInterval(interval);
   }, []);
 
@@ -58,13 +69,13 @@ const XRPPriceCard = () => {
           {arrow} {Math.abs(change || 0).toFixed(2)}%
         </span>
       </div>
-      <div className="text-xs text-gray-500 mt-1">Powered by CoinGecko</div>
+      <div className="text-xs text-gray-500 mt-1">Powered by Binance/Kraken</div>
     </div>
   );
 };
 
 const RecentPaymentsCard = () => {
-  const [payments, setPayments] = useState<FormattedPayment[]>([]);  // Typed state
+  const [payments, setPayments] = useState<FormattedPayment[]>([]); // Typed state
   const [loading, setLoading] = useState(true);
   const RECEIVING_ADDRESS = process.env.NEXT_PUBLIC_XRPL_RECEIVER_ADDRESS!;
 
@@ -81,41 +92,41 @@ const RecentPaymentsCard = () => {
           ledger_index_max: -1,
           forward: false,
         });
-        const txs = response.result.transactions
-          .filter((tx: Transaction) =>
-            tx &&
-            tx.tx &&
-            tx.tx.TransactionType === 'Payment' &&
-            tx.tx.Destination === RECEIVING_ADDRESS &&
-            tx.meta &&
-            tx.meta.TransactionResult === 'tesSUCCESS'
-          )
-          .slice(0, 5);
-        const formatted = txs.map((tx: Transaction) => {
-          const amountDrops = typeof tx.tx.Amount === 'string' ? Number(tx.tx.Amount) : 0;
+        const { transactions } = response.result; // Extracted transactions from response.result
+        const filteredTransactions = transactions.filter((tx: AccountTxTransaction) =>
+          tx.tx?.TransactionType === 'Payment' && // Use optional chaining for safety
+          tx.tx?.Destination === RECEIVING_ADDRESS && // Fixed from walletAddress to RECEIVING_ADDRESS
+          tx.validated // Leverage wrapper for validated-only txns
+        ).slice(0, 5);
+        const formatted = filteredTransactions.map((tx: AccountTxTransaction) => { // Fixed txs to filteredTransactions; typed as AccountTxTransaction
+          const amountDrops = typeof tx.tx?.Amount === 'string' ? Number(tx.tx.Amount) : 0; // Added optional chaining
           const amountXRP = amountDrops / 1000000;
-          const xrplTime = tx.tx.date || 0;
+          const xrplTime = tx.tx?.date || 0; // Added optional chaining
           const unixTime = (xrplTime + 946684800) * 1000;
           const date = new Date(unixTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
           return {
             amount: amountXRP,
             date,
-            hash: tx.hash, // fixed from tx.tx.hash
-            tag: tx.tx.DestinationTag || null,
+            hash: tx.tx?.hash || '', // Added optional chaining and fallback
+            tag: tx.tx?.DestinationTag || null,
           };
         });
         setPayments(formatted);
         await client.disconnect();
-      } catch (err: Error) {  // Typed and used err
-        console.error('Payments fetch failed', err.message);
+      } catch (err: unknown) { // Changed to unknown
+        if (err instanceof Error) {
+          console.error('Payments fetch failed', err.message);
+        } else {
+          console.error('Payments fetch failed', String(err));
+        }
       } finally {
-        setLoading(false);
+        setLoading(false); // Finally outside catch
       }
     };
     fetchPayments();
     const interval = setInterval(fetchPayments, 60000);
     return () => clearInterval(interval);
-  }, [RECEIVING_ADDRESS]);  // Added dep
+  }, [RECEIVING_ADDRESS]); // Added dep
 
   if (loading) return <p className="text-gray-500 mb-8">Loading recent payments...</p>;
   if (payments.length === 0) return <p className="text-gray-500 mb-8">No recent payments</p>;
@@ -151,7 +162,7 @@ export default function RightSidebar() {
       <XRPPriceCard />
       <h2 className="text-xl font-bold mb-4">Tax Overview (Free)</h2>
       <div className="bg-[#16181c] rounded-xl p-4 mb-6 border border-yellow-600">
-        <p className="text-sm text-gray-400">Next ~est. payment</p>
+        <p className="text-sm text-gray-400">Next est. payment</p>
         <p className="text-2xl font-bold">$6,283</p>
         <p className="text-sm text-gray-400">Apr 15, 2026</p>
         <p className="text-yellow-500 text-sm mt-2">Upcoming</p>

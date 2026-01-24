@@ -1,4 +1,4 @@
-import { Client, Wallet, Payment, convertStringToHex } from "xrpl";
+import { Client, Wallet, NFTokenMint, convertStringToHex } from "xrpl";
 
 const TESTNET_URL = process.env.NEXT_PUBLIC_XRPL_NETWORK || "wss://s.altnet.rippletest.net:51233";
 
@@ -31,41 +31,29 @@ export class XRPLService {
     return response.result.account_data.Balance;
   }
 
-  async submitPayment(
+  async mintMPTInvoice(
     wallet: Wallet,
-    destination: string,
-    amount: string,
-    memo?: string
+    uri: string, // Invoice data as URI (e.g., JSON IPFS link or memo)
+    transferable: boolean = true
   ) {
     await this.connect();
-    const payment: Payment = {
-      TransactionType: "Payment",
+    const nftMint: NFTokenMint = {
+      TransactionType: "NFTokenMint",
       Account: wallet.address,
-      Destination: destination,
-      Amount: amount,
-      Memos: memo
-        ? [
-            {
-              Memo: {
-                MemoData: convertStringToHex(memo),
-                MemoType: convertStringToHex("invoice"),
-              },
-            },
-          ]
-        : undefined,
+      URI: convertStringToHex(uri),
+      Flags: transferable ? 8 : 0, // 8 for transferable
+      NFTokenTaxon: 0, // Arbitrary taxon
     };
-    const prepared = await this.client.autofill(payment);
+    const prepared = await this.client.autofill(nftMint);
     const signed = wallet.sign(prepared);
     const result = await this.client.submitAndWait(signed.tx_blob);
     return result;
   }
 
-  // For dev/testing with seed
   createWalletFromSeed(seed: string): Wallet {
     return Wallet.fromSeed(seed);
   }
 
-  // Generate new testnet wallet
   async fundTestWallet(): Promise<Wallet> {
     await this.connect();
     const { wallet } = await this.client.fundWallet();

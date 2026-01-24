@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { xrplService } from '@/lib/xrpl-client';
 
 export default function XRPLConnect({ onConnect }: { onConnect: (wallet: any) => void }) {
-  const [seed, setSeed ] = useState(process.env.XRPL_TEST_SEED || '');
+  const [seed, setSeed] = useState(process.env.XRPL_TEST_SEED || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,7 +38,7 @@ export default function XRPLConnect({ onConnect }: { onConnect: (wallet: any) =>
         {loading ? 'Connecting...' : 'Connect XRPL Wallet'}
       </button>
       {error && <p className="text-red-500 mt-2">{error}</p>}
-      <p className="text-sm mt-2">For testnet—use faucet for seeds/XRP.</p>
+      <p className="text-sm mt-2">Testnet only—use faucet for seeds/XRP.</p>
     </div>
   );
 }
